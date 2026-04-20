@@ -1,0 +1,855 @@
+<!-- Grapefy Hub v2.0 -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grapefy — Hub Operacional</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0d1a;--bg2:#13122a;--bg3:#1a1836;--bg4:#21203f;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --accent:#8b5cf6;--accent-h:#7c3aed;
+  --green:#00d4aa;--yellow:#f7c948;--red:#ff6b6b;--blue:#82c8ff;
+  --text:#f0f0f0;--muted:#8b8aaa;--muted2:#5a5878;
+  --radius:12px;--radius-sm:8px;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+
+/* ── LAYOUT ── */
+.app{display:flex;height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{width:230px;min-width:230px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.logo{padding:20px 18px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;background:linear-gradient(135deg,#f472b6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:.8px;-webkit-text-fill-color:var(--muted)}
+.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted2);padding:16px 20px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13.5px;color:var(--muted);transition:all .15s;border-left:2px solid transparent;user-select:none}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.nav-item.active{color:var(--text);border-left-color:var(--accent);background:rgba(139,92,246,0.1)}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)}
+.user-pill{display:flex;align-items:center;gap:10px;background:var(--bg3);border-radius:10px;padding:10px 12px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#f472b6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.user-name{font-size:12px;font-weight:500}
+.user-role{font-size:10px;color:var(--muted)}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;gap:12px}
+.page-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;white-space:nowrap}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;transition:all .15s;font-weight:500;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-h)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-ghost.active{color:var(--text);border-color:var(--accent);background:rgba(139,92,246,.1)}
+.view-toggle{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px}
+.view-btn{padding:5px 12px;border-radius:6px;font-size:12px;border:none;cursor:pointer;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .15s}
+.view-btn.active{background:var(--accent);color:#fff}
+
+/* ── CONTENT ── */
+.page{flex:1;overflow-y:auto;padding:24px 28px;display:none;scrollbar-width:thin;scrollbar-color:var(--bg3) transparent}
+.page.active{display:block}
+.page::-webkit-scrollbar{width:5px}
+.page::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;transition:border-color .15s}
+.stat-card:hover{border-color:var(--border2)}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:4px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.filter-chip{padding:6px 14px;border-radius:20px;font-size:12px;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .15s}
+.filter-chip:hover{color:var(--text);border-color:var(--border2)}
+.filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.search-wrap{margin-left:auto;position:relative}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none}
+.search-input{padding:7px 14px 7px 32px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:220px;transition:border-color .15s}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--muted)}
+
+/* ── TASK LIST ── */
+.task-list{display:flex;flex-direction:column;gap:7px}
+.task-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.task-card:hover{border-color:rgba(139,92,246,.35);background:var(--bg3)}
+.task-card.p-alta{border-left-color:var(--red)}
+.task-card.p-media{border-left-color:var(--yellow)}
+.task-card.p-baixa{border-left-color:var(--green)}
+.task-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:10px}
+.task-check:hover{border-color:var(--green)}
+.task-check.done{background:var(--green);border-color:var(--green);color:#000;font-weight:700}
+.task-info{flex:1;min-width:0}
+.task-title{font-size:14px;font-weight:500;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-title.done{text-decoration:line-through;color:var(--muted)}
+.task-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
+.tag-client{background:rgba(139,92,246,.15);color:#b09fff}
+.tag-trafego{background:rgba(0,212,170,.12);color:var(--green)}
+.tag-social{background:rgba(247,201,72,.12);color:var(--yellow)}
+.tag-design{background:rgba(255,107,107,.12);color:#ff9494}
+.tag-atendimento{background:rgba(130,200,255,.12);color:var(--blue)}
+.status-badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.s-fazer{background:rgba(139,92,246,.15);color:#b09fff}
+.s-andamento{background:rgba(247,201,72,.12);color:var(--yellow)}
+.s-revisao{background:rgba(255,107,107,.12);color:#ff9494}
+.s-concluido{background:rgba(0,212,170,.12);color:var(--green)}
+.task-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.assignee-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.task-date{font-size:11px;color:var(--muted);white-space:nowrap}
+.task-date.late{color:var(--red)}
+.task-actions{display:flex;gap:5px;opacity:0;transition:opacity .15s}
+.task-card:hover .task-actions{opacity:1}
+.act-btn{background:var(--bg4);border:none;color:var(--muted);cursor:pointer;border-radius:5px;padding:4px 7px;font-size:11px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.act-btn:hover{color:var(--text);background:rgba(255,255,255,.08)}
+.act-btn.del:hover{color:var(--red)}
+
+/* ── KANBAN ── */
+.kanban{display:none;gap:12px;height:calc(100vh - 180px)}
+.kanban.active{display:flex}
+.list-view.hidden{display:none}
+.kanban-col{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;overflow-y:auto}
+.kanban-col-header{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.kanban-count{background:var(--bg3);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:400;color:var(--muted)}
+.kanban-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px 12px;margin-bottom:7px;font-size:13px;cursor:pointer;transition:all .15s}
+.kanban-card:hover{border-color:rgba(139,92,246,.4);background:var(--bg4)}
+.kanban-card-title{font-weight:500;margin-bottom:7px;line-height:1.4}
+.kanban-card-meta{display:flex;justify-content:space-between;align-items:center}
+
+/* ── CLIENTES ── */
+.clients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.client-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .15s}
+.client-card:hover{border-color:rgba(139,92,246,.4);background:var(--bg3)}
+.client-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}
+.client-tasks{font-size:12px;color:var(--muted);margin-bottom:12px}
+.client-bars{display:flex;flex-direction:column;gap:6px}
+.client-bar-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.client-bar-label{color:var(--muted);width:70px;flex-shrink:0}
+.client-bar-track{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.client-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+.client-bar-count{color:var(--muted);width:12px;text-align:right}
+
+/* ── TIME ── */
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.member-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px;text-align:center;transition:all .15s}
+.member-card:hover{border-color:rgba(139,92,246,.4);background:var(--bg3)}
+.member-avatar{width:52px;height:52px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+.member-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px}
+.member-role-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;margin-bottom:12px}
+.member-stats{display:flex;justify-content:center;gap:16px}
+.mstat{display:flex;flex-direction:column;align-items:center}
+.mstat-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}
+.mstat-label{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* ── DASHBOARD ── */
+.periodo-btns{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:16px}
+.chart-wrap{position:relative;height:200px}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+.table-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.table-header-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.badge-green{background:rgba(0,212,170,.12);color:var(--green)}
+.badge-red{background:rgba(255,107,107,.12);color:var(--red)}
+.dash-tabs{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:20px;width:fit-content}
+.dash-tab{padding:7px 18px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--muted);transition:all .15s;font-family:'DM Sans',sans-serif;border:none;background:transparent}
+.dash-tab.active{background:var(--accent);color:#fff}
+.loading-dash{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;gap:16px;color:var(--muted)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:var(--radius);padding:18px;color:var(--red);margin-bottom:20px;font-size:13px}
+.section-label{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px;margin-top:8px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:500px;max-width:95vw;padding:28px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:20px}
+.form-group{margin-bottom:15px}
+.form-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.6px}
+.form-input,.form-select,.form-textarea{width:100%;padding:10px 13px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-select option{background:var(--bg3)}
+.form-textarea{resize:vertical;min-height:75px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.wa-note{display:flex;align-items:center;gap:8px;font-size:12px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.15);border-radius:8px;padding:10px 13px;margin-bottom:4px;color:var(--green)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid rgba(0,212,170,.3);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;font-size:13px;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-icon{font-size:20px;flex-shrink:0}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.5}
+.empty-text{font-size:14px;margin-bottom:16px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{width:56px;min-width:56px}
+  .logo-text,.logo-sub,.nav-item span:not(.nav-icon),.nav-badge,.user-name,.user-role,.nav-section{display:none}
+  .logo{justify-content:center;padding:14px 0}
+  .nav-item{padding:12px 0;justify-content:center}
+  .sidebar-footer{padding:10px 0;display:flex;justify-content:center}
+  .user-pill{background:transparent;padding:8px 0}
+  .stats{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+  .topbar{padding:12px 16px}
+  .page{padding:16px}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+  <div class="logo">
+    <svg width="28" height="32" viewBox="0 0 80 90" fill="none">
+      <defs><linearGradient id="gg" x1="0" y1="0" x2="80" y2="90" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#f472b6"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
+      <path d="M40 8 Q48 2 52 6" stroke="url(#gg)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+      <circle cx="30" cy="28" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="50" cy="28" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="20" cy="45" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="40" cy="45" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="60" cy="45" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="30" cy="62" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="50" cy="62" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+      <circle cx="40" cy="79" r="11" stroke="url(#gg)" stroke-width="3.5" fill="none"/>
+    </svg>
+    <div>
+      <div class="logo-text">grapefy</div>
+      <div class="logo-sub">HUB OPERACIONAL</div>
+    </div>
+  </div>
+
+  <span class="nav-section">Operacional</span>
+  <div class="nav-item active" id="nav-tarefas" onclick="showPage('tarefas')">
+    <span class="nav-icon">⚡</span><span>Tarefas</span>
+    <span class="nav-badge" id="badge-pendente" style="display:none">0</span>
+  </div>
+  <div class="nav-item" id="nav-clientes" onclick="showPage('clientes')">
+    <span class="nav-icon">🏢</span><span>Clientes</span>
+  </div>
+  <div class="nav-item" id="nav-time" onclick="showPage('time')">
+    <span class="nav-icon">👥</span><span>Time</span>
+  </div>
+
+  <span class="nav-section">Performance</span>
+  <div class="nav-item" id="nav-meta" onclick="showPage('meta')">
+    <span class="nav-icon">📊</span><span>Meta Ads</span>
+  </div>
+  <div class="nav-item" id="nav-google" onclick="showPage('google')">
+    <span class="nav-icon">📈</span><span>Google Ads</span>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="avatar">G</div>
+      <div>
+        <div class="user-name">Grapefy</div>
+        <div class="user-role">Administrador</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Tarefas</div>
+    <div class="topbar-right" id="topbar-actions">
+      <div class="view-toggle">
+        <button class="view-btn active" id="vbtn-list" onclick="setView('list')">☰ Lista</button>
+        <button class="view-btn" id="vbtn-kanban" onclick="setView('kanban')">⊞ Kanban</button>
+      </div>
+      <button class="btn btn-ghost" onclick="exportCSV()">↓ Exportar</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Nova tarefa</button>
+    </div>
+  </div>
+
+  <!-- PAGE: TAREFAS -->
+  <div class="page active" id="page-tarefas">
+    <div class="stats">
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="s-total">0</div><div class="stat-sub">todas as tarefas</div></div>
+      <div class="stat-card"><div class="stat-label">Em andamento</div><div class="stat-value" id="s-andamento" style="color:var(--yellow)">0</div><div class="stat-sub"><span class="dot" style="background:var(--yellow)"></span>em progresso</div></div>
+      <div class="stat-card"><div class="stat-label">Concluídas</div><div class="stat-value" id="s-concluido" style="color:var(--green)">0</div><div class="stat-sub"><span class="dot" style="background:var(--green)"></span>finalizadas</div></div>
+      <div class="stat-card"><div class="stat-label">Atrasadas</div><div class="stat-value" id="s-atrasado" style="color:var(--red)">0</div><div class="stat-sub"><span class="dot" style="background:var(--red)"></span>ação necessária</div></div>
+    </div>
+    <div class="filters">
+      <button class="filter-chip active" onclick="filterArea('todos',this)">Todos</button>
+      <button class="filter-chip" onclick="filterArea('trafego',this)">📈 Tráfego</button>
+      <button class="filter-chip" onclick="filterArea('social',this)">📱 Social Media</button>
+      <button class="filter-chip" onclick="filterArea('design',this)">🎨 Design</button>
+      <button class="filter-chip" onclick="filterArea('atendimento',this)">🤝 Atendimento</button>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" placeholder="Buscar tarefa ou cliente..." oninput="searchTasks(this.value)">
+      </div>
+    </div>
+    <div class="task-list list-view" id="task-list"></div>
+    <div class="kanban" id="kanban-view">
+      <div class="kanban-col"><div class="kanban-col-header" style="color:#b09fff">A fazer <span class="kanban-count" id="kc-fazer">0</span></div><div id="kcol-fazer"></div></div>
+      <div class="kanban-col"><div class="kanban-col-header" style="color:var(--yellow)">Andamento <span class="kanban-count" id="kc-andamento">0</span></div><div id="kcol-andamento"></div></div>
+      <div class="kanban-col"><div class="kanban-col-header" style="color:#ff9494">Revisão <span class="kanban-count" id="kc-revisao">0</span></div><div id="kcol-revisao"></div></div>
+      <div class="kanban-col"><div class="kanban-col-header" style="color:var(--green)">Concluído <span class="kanban-count" id="kc-concluido">0</span></div><div id="kcol-concluido"></div></div>
+    </div>
+  </div>
+
+  <!-- PAGE: CLIENTES -->
+  <div class="page" id="page-clientes">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:13px;color:var(--muted)" id="client-count"></div>
+      <button class="btn btn-primary" onclick="openClientModal()">+ Novo cliente</button>
+    </div>
+    <div class="clients-grid" id="clients-grid"></div>
+  </div>
+
+  <!-- PAGE: TIME -->
+  <div class="page" id="page-time">
+    <div style="margin-bottom:20px;font-size:13px;color:var(--muted)">Carga de tarefas por membro do time</div>
+    <div class="team-grid" id="team-grid"></div>
+  </div>
+
+  <!-- PAGE: META ADS -->
+  <div class="page" id="page-meta">
+    <div class="dash-tabs">
+      <button class="dash-tab active" onclick="setDashTab('meta','geral',this)">📊 Visão Geral</button>
+      <button class="dash-tab" onclick="setDashTab('meta','clientes',this)">🏢 Por Cliente</button>
+    </div>
+    <div class="periodo-btns">
+      <span style="font-size:12px;color:var(--muted);align-self:center;margin-right:4px">Período:</span>
+      <button class="btn btn-ghost active" onclick="setMetaPeriodo('today',this)">Hoje</button>
+      <button class="btn btn-ghost" onclick="setMetaPeriodo('last_7d',this)">7 dias</button>
+      <button class="btn btn-ghost" onclick="setMetaPeriodo('last_30d',this)">30 dias</button>
+      <button class="btn btn-ghost" onclick="setMetaPeriodo('this_month',this)">Este mês</button>
+      <button class="btn btn-ghost" onclick="setMetaPeriodo('last_month',this)">Mês anterior</button>
+      <button class="btn btn-ghost" style="margin-left:auto" onclick="loadMetaAds()">↺ Atualizar</button>
+      <button class="btn btn-ghost" onclick="exportMetaCSV()">↓ CSV</button>
+    </div>
+    <div id="meta-loading" class="loading-dash"><div class="spinner"></div><div>Carregando Meta Ads...</div></div>
+    <div id="meta-error" class="error-box" style="display:none"></div>
+    <div id="meta-geral" style="display:none">
+      <div class="dash-stats" id="meta-stats"></div>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">Investimento por cliente (R$)</div><div class="chart-wrap"><canvas id="chart-meta-invest"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Leads por cliente</div><div class="chart-wrap"><canvas id="chart-meta-leads"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">CTR por cliente (%)</div><div class="chart-wrap"><canvas id="chart-meta-ctr"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">CPC por cliente (R$)</div><div class="chart-wrap"><canvas id="chart-meta-cpc"></canvas></div></div>
+      </div>
+    </div>
+    <div id="meta-clientes" style="display:none">
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-header-title">Contas Meta Ads</div><span style="font-size:12px;color:var(--muted)" id="meta-total-contas"></span></div>
+        <table><thead><tr><th>Cliente</th><th>Investimento</th><th>Impressões</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>CPM</th><th>Alcance</th><th>Leads</th><th>CPL</th><th>Status</th></tr></thead><tbody id="meta-tabela"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: GOOGLE ADS -->
+  <div class="page" id="page-google">
+    <div class="dash-tabs">
+      <button class="dash-tab active" onclick="setDashTab('google','geral',this)">📊 Visão Geral</button>
+      <button class="dash-tab" onclick="setDashTab('google','clientes',this)">🏢 Por Cliente</button>
+    </div>
+    <div class="periodo-btns">
+      <span style="font-size:12px;color:var(--muted);align-self:center;margin-right:4px">Período:</span>
+      <button class="btn btn-ghost active" onclick="setGooglePeriodo('LAST_7_DAYS',this)">7 dias</button>
+      <button class="btn btn-ghost" onclick="setGooglePeriodo('LAST_30_DAYS',this)">30 dias</button>
+      <button class="btn btn-ghost" onclick="setGooglePeriodo('THIS_MONTH',this)">Este mês</button>
+      <button class="btn btn-ghost" onclick="setGooglePeriodo('LAST_MONTH',this)">Mês anterior</button>
+      <button class="btn btn-ghost" style="margin-left:auto" onclick="loadGoogleAds()">↺ Atualizar</button>
+      <button class="btn btn-ghost" onclick="exportGoogleCSV()">↓ CSV</button>
+    </div>
+    <div id="google-loading" class="loading-dash"><div class="spinner"></div><div>Carregando Google Ads...</div></div>
+    <div id="google-error" class="error-box" style="display:none"></div>
+    <div id="google-geral" style="display:none">
+      <div class="dash-stats" id="google-stats"></div>
+      <div class="charts-grid">
+        <div class="chart-card"><div class="chart-title">Investimento por cliente (R$)</div><div class="chart-wrap"><canvas id="chart-google-invest"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Cliques por cliente</div><div class="chart-wrap"><canvas id="chart-google-clicks"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">CTR por cliente (%)</div><div class="chart-wrap"><canvas id="chart-google-ctr"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Conversões por cliente</div><div class="chart-wrap"><canvas id="chart-google-conv"></canvas></div></div>
+      </div>
+    </div>
+    <div id="google-clientes" style="display:none">
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-header-title">Contas Google Ads</div><span style="font-size:12px;color:var(--muted)" id="google-total-contas"></span></div>
+        <table><thead><tr><th>Cliente</th><th>Investimento</th><th>Impressões</th><th>Cliques</th><th>CTR</th><th>CPC</th><th>CPM</th><th>Conversões</th><th>CPA</th></tr></thead><tbody id="google-tabela"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL TAREFA -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-title" id="modal-task-title">Nova tarefa</div>
+    <div class="form-group"><label class="form-label">Título *</label><input class="form-input" id="f-titulo" placeholder="Ex: Criar criativos para campanha de maio"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Cliente *</label><select class="form-select" id="f-cliente"></select></div>
+      <div class="form-group"><label class="form-label">Setor *</label><select class="form-select" id="f-setor"><option value="">Selecionar</option><option value="trafego">📈 Tráfego Pago</option><option value="social">📱 Social Media</option><option value="design">🎨 Design</option><option value="atendimento">🤝 Atendimento</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Responsável</label><select class="form-select" id="f-responsavel"><option value="">Selecionar</option><option value="Ana">Ana (Tráfego)</option><option value="Bruno">Bruno (Social)</option><option value="Carla">Carla (Design)</option><option value="Diego">Diego (Atendimento)</option></select></div>
+      <div class="form-group"><label class="form-label">Prazo</label><input class="form-input" type="date" id="f-prazo"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Prioridade</label><select class="form-select" id="f-prioridade"><option value="baixa">🟢 Baixa</option><option value="media" selected>🟡 Média</option><option value="alta">🔴 Alta</option></select></div>
+      <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="f-status"><option value="fazer">A fazer</option><option value="andamento">Em andamento</option><option value="revisao">Em revisão</option><option value="concluido">Concluído</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="f-descricao" placeholder="Detalhes, links, instruções..."></textarea></div>
+    <div class="wa-note">💬 <div>Responsável será notificado automaticamente via <strong>WhatsApp</strong></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-task')">Cancelar</button>
+      <button class="btn btn-primary" id="modal-task-btn" onclick="saveTask()">Criar + Notificar WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLIENTE -->
+<div class="modal-overlay" id="modal-client">
+  <div class="modal">
+    <div class="modal-title">Novo cliente</div>
+    <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="fc-nome" placeholder="Ex: Clínica Dr. Silva"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Segmento</label><input class="form-input" id="fc-segmento" placeholder="Ex: Saúde, E-commerce..."></div>
+      <div class="form-group"><label class="form-label">WhatsApp</label><input class="form-input" id="fc-wa" placeholder="5562999990001"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-client')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClient()">Salvar cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast-el">
+  <span class="toast-icon" id="toast-icon">💬</span>
+  <div><div id="toast-title" style="font-weight:500;margin-bottom:2px">Tarefa criada!</div><div id="toast-msg" style="font-size:11px;color:var(--muted)">Notificação enviada</div></div>
+</div>
+
+<script>
+// ── CONFIG ──
+const SUPA_URL='https://xphtawoewwqljzehxavt.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwaHRhd29ld3dxbGp6ZWh4YXZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzcxNDYsImV4cCI6MjA5MDkxMzE0Nn0.ybbSi1vgxdlV-d4AQp9g8WUKTNiBud0P1P0Q9Q-pLP8';
+const META_FN=`${SUPA_URL}/functions/v1/clever-api`;
+const GOOGLE_FN=`${SUPA_URL}/functions/v1/swift-service`;
+const FN_HEADERS={'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','apikey':SUPA_KEY};
+
+const WA_TOKEN='EAAdnPQxjmPMBRDddwoNR4QjpN2h9jMXKXgEuapfJEwPl7I0vMZCdZCT5MYkA1VNeDwEhXcZADGJJBMX2YvF5CImdNSJ6iGAZBY7Pvb5UFhPSmpLPmYz6KyrToZATUPx4JHmV227VChZAVxfppg05C7eZAwz8vZCL9ARggqqjtZCY9Gbu7LDi4M4Xfr2tZAn0KBw6T3SMdKsMqoToBXgmBkw38raVIKZCZBNuqHWBVA8RHIN1vC4YaMNYDLzaQAsSkVIF8yqgfMFcJ2vFuRGD5FG3lmFv';
+const WA_PHONE_ID='1113659098488936';
+const TEAM_WA={'Ana':'5564992255987','Bruno':'5564992255987','Carla':'5564992255987','Diego':'5564992255987'};
+
+const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+const TEAM=[{name:'Ana',role:'trafego',color:'#8b5cf6'},{name:'Bruno',role:'social',color:'#f7c948'},{name:'Carla',role:'design',color:'#ff6b6b'},{name:'Diego',role:'atendimento',color:'#00d4aa'}];
+const STATUS_LABELS={fazer:'A fazer',andamento:'Em andamento',revisao:'Em revisão',concluido:'Concluído'};
+const SECTOR_LABELS={trafego:'📈 Tráfego',social:'📱 Social',design:'🎨 Design',atendimento:'🤝 Atendimento'};
+const SECTOR_COLORS={trafego:'var(--green)',social:'var(--yellow)',design:'#ff9494',atendimento:'var(--blue)'};
+const CORES=['#8b5cf6','#f472b6','#00d4aa','#f7c948','#ff6b6b','#82c8ff','#a78bfa','#34d399','#fb923c','#60a5fa'];
+
+let TASKS=[],CLIENTS=[],filtered=[],activeArea='todos',searchQ='',currentView='list',editingId=null;
+let metaDados=null,googleDados=null,metaPeriodo='last_30d',googlePeriodo='LAST_30_DAYS';
+let metaDashTab='geral',googleDashTab='geral';
+let charts={};
+const today=new Date().toISOString().split('T')[0];
+
+function isLate(p,s){return p&&p<today&&s!=='concluido'}
+function getColor(n){const m=TEAM.find(t=>t.name===n);return m?m.color:'#888'}
+function fmt(v,p='R$'){if(v===null||v===undefined)return'—';const n=parseFloat(v);if(isNaN(n))return'—';return p+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtN(v){return parseInt(v||0).toLocaleString('pt-BR')}
+function fmtP(v){return parseFloat(v||0).toFixed(2)+'%'}
+
+// ── NAVIGATION ──
+
+function showPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('active');
+  const titles={tarefas:'Tarefas',clientes:'Clientes',time:'Time',meta:'Meta Ads',google:'Google Ads'};
+  document.getElementById('page-title').textContent=titles[page]||page;
+  document.getElementById('topbar-actions').style.display=page==='tarefas'?'flex':'none';
+  if(page==='clientes')renderClients();
+  if(page==='time')renderTeam();
+  if(page==='meta'&&!metaDados)loadMetaAds();
+  if(page==='google'&&!googleDados)loadGoogleAds();
+}
+
+// ── TASKS ──
+async function loadTasks(){
+  const{data}=await sb.from('tarefas').select('*').order('created_at',{ascending:false});
+  TASKS=data||[];render();
+}
+async function loadClients(){
+  const{data}=await sb.from('clientes').select('*').order('nome');
+  CLIENTS=data||[];
+}
+
+function applyFilter(){
+  filtered=TASKS.filter(t=>{
+    const aok=activeArea==='todos'||t.setor===activeArea;
+    const qok=!searchQ||t.titulo.toLowerCase().includes(searchQ)||t.cliente.toLowerCase().includes(searchQ)||(t.responsavel||'').toLowerCase().includes(searchQ);
+    return aok&&qok;
+  });
+}
+
+function renderList(){
+  const el=document.getElementById('task-list');
+  if(!filtered.length){el.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nenhuma tarefa encontrada</div><button class="btn btn-primary" onclick="openModal()">Criar primeira tarefa</button></div>`;return}
+  el.innerHTML=filtered.map(t=>`
+    <div class="task-card p-${t.prioridade}">
+      <div class="task-check ${t.status==='concluido'?'done':''}" onclick="advanceStatus('${t.id}')">${t.status==='concluido'?'✓':''}</div>
+      <div class="task-info">
+        <div class="task-title ${t.status==='concluido'?'done':''}">${t.titulo}</div>
+        <div class="task-meta">
+          <span class="tag tag-client">🏢 ${t.cliente}</span>
+          <span class="tag tag-${t.setor}">${SECTOR_LABELS[t.setor]||t.setor}</span>
+          <span class="status-badge s-${t.status}">${STATUS_LABELS[t.status]}</span>
+        </div>
+      </div>
+      <div class="task-right">
+        <div class="task-actions">
+          <button class="act-btn" onclick="editTask('${t.id}')">✏️</button>
+          <button class="act-btn del" onclick="deleteTask('${t.id}')">🗑</button>
+        </div>
+        <div class="assignee-badge" style="background:${getColor(t.responsavel)}22;color:${getColor(t.responsavel)};border:1px solid ${getColor(t.responsavel)}44">${t.responsavel?t.responsavel[0]:'?'}</div>
+        <div class="task-date ${isLate(t.prazo,t.status)?'late':''}">${isLate(t.prazo,t.status)?'⚠ ':''}${t.prazo||'—'}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderKanban(){
+  const cols={fazer:[],andamento:[],revisao:[],concluido:[]};
+  filtered.forEach(t=>cols[t.status]&&cols[t.status].push(t));
+  ['fazer','andamento','revisao','concluido'].forEach(s=>{
+    document.getElementById('kc-'+s).textContent=cols[s].length;
+    document.getElementById('kcol-'+s).innerHTML=cols[s].map(t=>`
+      <div class="kanban-card" onclick="advanceStatus('${t.id}')">
+        <div class="kanban-card-title">${t.titulo}</div>
+        <div class="kanban-card-meta">
+          <span class="tag tag-client" style="font-size:10px">🏢 ${t.cliente}</span>
+          <div class="assignee-badge" style="background:${getColor(t.responsavel)}22;color:${getColor(t.responsavel)};border:1px solid ${getColor(t.responsavel)}44;width:24px;height:24px;font-size:10px">${t.responsavel?t.responsavel[0]:'?'}</div>
+        </div>
+      </div>`).join('');
+  });
+}
+
+function updateStats(){
+  document.getElementById('s-total').textContent=TASKS.length;
+  document.getElementById('s-andamento').textContent=TASKS.filter(t=>t.status==='andamento').length;
+  document.getElementById('s-concluido').textContent=TASKS.filter(t=>t.status==='concluido').length;
+  document.getElementById('s-atrasado').textContent=TASKS.filter(t=>isLate(t.prazo,t.status)).length;
+  const pend=TASKS.filter(t=>t.status==='fazer').length;
+  const badge=document.getElementById('badge-pendente');
+  badge.textContent=pend;badge.style.display=pend?'':'none';
+}
+
+function render(){applyFilter();if(currentView==='list')renderList();else renderKanban();updateStats()}
+function setView(v){currentView=v;document.getElementById('vbtn-list').classList.toggle('active',v==='list');document.getElementById('vbtn-kanban').classList.toggle('active',v==='kanban');document.getElementById('task-list').classList.toggle('hidden',v!=='list');document.getElementById('kanban-view').classList.toggle('active',v==='kanban');render()}
+function filterArea(area,el){activeArea=area;document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));el.classList.add('active');render()}
+function searchTasks(q){searchQ=q.toLowerCase();render()}
+
+async function advanceStatus(id){
+  const t=TASKS.find(x=>x.id==id);if(!t)return;
+  const order=['fazer','andamento','revisao','concluido'];
+  const ns=order[(order.indexOf(t.status)+1)%order.length];
+  await sb.from('tarefas').update({status:ns}).eq('id',id);
+  t.status=ns;render();
+  if(ns==='concluido')toast('Tarefa concluída! 🎉','✅');
+}
+
+async function deleteTask(id){
+  if(!confirm('Excluir esta tarefa?'))return;
+  await sb.from('tarefas').delete().eq('id',id);
+  TASKS=TASKS.filter(t=>t.id!=id);render();toast('Tarefa excluída','🗑');
+}
+
+function openModal(){
+  editingId=null;
+  document.getElementById('modal-task-title').textContent='Nova tarefa';
+  document.getElementById('modal-task-btn').textContent='Criar + Notificar WhatsApp';
+  ['f-titulo','f-setor','f-responsavel','f-prazo','f-descricao'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-prioridade').value='media';
+  document.getElementById('f-status').value='fazer';
+  populateClientSelect();
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function editTask(id){
+  editingId=id;
+  const t=TASKS.find(x=>x.id==id);if(!t)return;
+  document.getElementById('modal-task-title').textContent='Editar tarefa';
+  document.getElementById('modal-task-btn').textContent='Salvar alterações';
+  document.getElementById('f-titulo').value=t.titulo;
+  populateClientSelect();
+  document.getElementById('f-cliente').value=t.cliente;
+  document.getElementById('f-setor').value=t.setor;
+  document.getElementById('f-responsavel').value=t.responsavel||'';
+  document.getElementById('f-prazo').value=t.prazo||'';
+  document.getElementById('f-prioridade').value=t.prioridade;
+  document.getElementById('f-status').value=t.status;
+  document.getElementById('f-descricao').value=t.descricao||'';
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function populateClientSelect(){
+  const sel=document.getElementById('f-cliente');
+  sel.innerHTML='<option value="">Selecionar cliente</option>'+CLIENTS.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+}
+
+async function saveTask(){
+  const titulo=document.getElementById('f-titulo').value.trim();
+  const cliente=document.getElementById('f-cliente').value;
+  const setor=document.getElementById('f-setor').value;
+  const responsavel=document.getElementById('f-responsavel').value;
+  const prazo=document.getElementById('f-prazo').value||null;
+  const prioridade=document.getElementById('f-prioridade').value;
+  const status=document.getElementById('f-status').value;
+  const descricao=document.getElementById('f-descricao').value;
+  if(!titulo||!cliente||!setor){alert('Preencha título, cliente e setor!');return}
+  const btn=document.getElementById('modal-task-btn');
+  btn.textContent='Salvando...';btn.disabled=true;
+  if(editingId){
+    const{error}=await sb.from('tarefas').update({titulo,cliente,setor,responsavel,prazo,prioridade,status,descricao}).eq('id',editingId);
+    if(!error){const t=TASKS.find(x=>x.id==editingId);Object.assign(t,{titulo,cliente,setor,responsavel,prazo,prioridade,status,descricao});toast('Tarefa atualizada!','✅')}
+  }else{
+    const{data,error}=await sb.from('tarefas').insert([{titulo,cliente,setor,responsavel,prazo,prioridade,status,descricao}]).select().single();
+    if(!error){
+      TASKS.unshift(data);
+      const waNum=TEAM_WA[responsavel];
+      if(waNum&&responsavel){
+        const msg=`🍇 *Grapefy Hub — Nova tarefa!*\n\n👤 Olá, ${responsavel}!\n📋 *${titulo}*\n🏢 Cliente: ${cliente}\n📂 Setor: ${({trafego:'Tráfego Pago',social:'Social Media',design:'Design',atendimento:'Atendimento'})[setor]||setor}\n📅 Prazo: ${prazo||'não definido'}${descricao?'\n\n📝 '+descricao:''}`;
+        fetch(`https://graph.facebook.com/v19.0/${WA_PHONE_ID}/messages`,{method:'POST',headers:{'Authorization':'Bearer '+WA_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:waNum,type:'text',text:{body:msg}})});
+      }
+      toast(`Tarefa criada!${responsavel?' '+responsavel+' notificado 💬':''}`,responsavel?'💬':'✅');
+    }
+  }
+  btn.textContent=editingId?'Salvar alterações':'Criar + Notificar WhatsApp';btn.disabled=false;
+  closeModal('modal-task');render();
+}
+
+// ── CLIENTES ──
+async function renderClients(){
+  await loadClients();
+  const grid=document.getElementById('clients-grid');
+  document.getElementById('client-count').textContent=`${CLIENTS.length} cliente${CLIENTS.length!==1?'s':''}`;
+  grid.innerHTML=CLIENTS.map(c=>{
+    const ct=TASKS.filter(t=>t.cliente===c.nome);
+    const segs=['trafego','social','design','atendimento'];
+    const bars=segs.map(s=>{const count=ct.filter(t=>t.setor===s).length;const max=Math.max(...segs.map(ss=>ct.filter(t=>t.setor===ss).length),1);return{s,count,pct:Math.round(count/max*100)}});
+    return`<div class="client-card">
+      <div class="client-name">${c.nome}</div>
+      <div class="client-tasks">${c.segmento||'—'} · ${ct.length} tarefa${ct.length!==1?'s':''}</div>
+      <div class="client-bars">${bars.map(b=>`<div class="client-bar-row"><span class="client-bar-label">${{trafego:'Tráfego',social:'Social',design:'Design',atendimento:'Atend.'}[b.s]}</span><div class="client-bar-track"><div class="client-bar-fill" style="width:${b.pct}%;background:${SECTOR_COLORS[b.s]}"></div></div><span class="client-bar-count">${b.count}</span></div>`).join('')}</div>
+      ${c.wa?`<div style="margin-top:12px"><a href="https://wa.me/${c.wa}" target="_blank" style="font-size:12px;color:var(--green)">💬 Abrir WhatsApp</a></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openClientModal(){['fc-nome','fc-segmento','fc-wa'].forEach(id=>document.getElementById(id).value='');document.getElementById('modal-client').classList.add('open')}
+async function saveClient(){
+  const nome=document.getElementById('fc-nome').value.trim();
+  if(!nome){alert('Informe o nome do cliente');return}
+  const{data}=await sb.from('clientes').insert([{nome,segmento:document.getElementById('fc-segmento').value,wa:document.getElementById('fc-wa').value}]).select().single();
+  if(data)CLIENTS.push(data);
+  closeModal('modal-client');renderClients();toast(`Cliente "${nome}" adicionado!`,'🏢');
+}
+
+// ── TIME ──
+function renderTeam(){
+  document.getElementById('team-grid').innerHTML=TEAM.map(m=>{
+    const mt=TASKS.filter(t=>t.responsavel===m.name);
+    const done=mt.filter(t=>t.status==='concluido').length;
+    const late=mt.filter(t=>isLate(t.prazo,t.status)).length;
+    return`<div class="member-card">
+      <div class="member-avatar" style="background:${m.color}22;color:${m.color};border:2px solid ${m.color}33">${m.name[0]}</div>
+      <div class="member-name">${m.name}</div>
+      <div class="member-role-tag" style="background:${m.color}15;color:${m.color}">${{trafego:'Tráfego Pago',social:'Social Media',design:'Design',atendimento:'Atendimento'}[m.role]}</div>
+      <div class="member-stats">
+        <div class="mstat"><div class="mstat-val">${mt.length}</div><div class="mstat-label">tarefas</div></div>
+        <div class="mstat"><div class="mstat-val" style="color:var(--green)">${done}</div><div class="mstat-label">concluídas</div></div>
+        <div class="mstat"><div class="mstat-val" style="color:${late?'var(--red)':'var(--muted)'}">${late}</div><div class="mstat-label">atrasadas</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── META ADS ──
+async function loadMetaAds(){
+  document.getElementById('meta-loading').style.display='flex';
+  document.getElementById('meta-geral').style.display='none';
+  document.getElementById('meta-clientes').style.display='none';
+  document.getElementById('meta-error').style.display='none';
+  try{
+    const res=await fetch(META_FN,{method:'POST',headers:FN_HEADERS,body:JSON.stringify({periodo:metaPeriodo})});
+    const json=await res.json();
+    if(json.error)throw new Error(json.error);
+    metaDados=json.contas||[];
+    document.getElementById('meta-loading').style.display='none';
+    renderMetaDados();
+    setMetaTabVisible();
+  }catch(e){
+    document.getElementById('meta-loading').style.display='none';
+    const eb=document.getElementById('meta-error');eb.style.display='block';
+    eb.innerHTML=`⚠️ ${e.message}<br><small>Token da Meta pode ter expirado. Gere um novo no Graph Explorer.</small>`;
+  }
+}
+
+function renderMetaDados(){
+  if(!metaDados?.length)return;
+  const total=metaDados.reduce((a,c)=>({investimento:a.investimento+parseFloat(c.investimento||0),impressoes:a.impressoes+parseInt(c.impressoes||0),cliques:a.cliques+parseInt(c.cliques||0),leads:a.leads+parseInt(c.leads||0)}),{investimento:0,impressoes:0,cliques:0,leads:0});
+  const ctr=total.impressoes>0?(total.cliques/total.impressoes*100).toFixed(2):0;
+  const cpc=total.cliques>0?(total.investimento/total.cliques).toFixed(2):0;
+  const cpl=total.leads>0?(total.investimento/total.leads).toFixed(2):null;
+  document.getElementById('meta-stats').innerHTML=[
+    {l:'Investimento',v:fmt(total.investimento),s:`${metaDados.length} contas`},
+    {l:'Impressões',v:fmtN(total.impressoes),s:`Alcance total`},
+    {l:'Cliques',v:fmtN(total.cliques),s:`CTR: ${fmtP(ctr)}`},
+    {l:'CPC médio',v:fmt(cpc),s:'custo por clique'},
+    {l:'Leads',v:fmtN(total.leads),s:cpl?`CPL: ${fmt(cpl)}`:'sem leads'},
+  ].map(s=>`<div class="stat-card"><div class="stat-label">${s.l}</div><div class="stat-value">${s.v}</div><div class="stat-sub">${s.s}</div></div>`).join('');
+  const nomes=metaDados.map(c=>c.nome.length>16?c.nome.substring(0,16)+'…':c.nome);
+  renderChart('chart-meta-invest','bar',nomes,metaDados.map(c=>parseFloat(c.investimento||0)));
+  renderChart('chart-meta-leads','bar',nomes,metaDados.map(c=>parseInt(c.leads||0)));
+  renderChart('chart-meta-ctr','bar',nomes,metaDados.map(c=>parseFloat(c.ctr||0)));
+  renderChart('chart-meta-cpc','bar',nomes,metaDados.map(c=>parseFloat(c.cpc||0)));
+  document.getElementById('meta-total-contas').textContent=`${metaDados.length} contas`;
+  document.getElementById('meta-tabela').innerHTML=metaDados.map(c=>`
+    <tr><td><strong>${c.nome}</strong></td><td>${fmt(c.investimento)}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${fmtP(c.ctr)}</td><td>${fmt(c.cpc)}</td><td>${fmt(c.cpm)}</td><td>${fmtN(c.alcance)}</td><td>${fmtN(c.leads)}</td><td>${c.cpl?fmt(c.cpl):'—'}</td><td><span class="badge ${c.status==1?'badge-green':'badge-red'}">${c.status==1?'Ativa':'Inativa'}</span></td></tr>
+  `).join('');
+}
+
+function setMetaPeriodo(p,el){metaPeriodo=p;document.querySelectorAll('#page-meta .periodo-btns .btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');loadMetaAds()}
+function setMetaTabVisible(){document.getElementById('meta-geral').style.display=metaDashTab==='geral'?'':'none';document.getElementById('meta-clientes').style.display=metaDashTab==='clientes'?'':'none'}
+function exportMetaCSV(){if(!metaDados?.length){alert('Carregue os dados primeiro!');return}exportData(metaDados,'grapefy-meta-ads')}
+
+// ── GOOGLE ADS ──
+async function loadGoogleAds(){
+  document.getElementById('google-loading').style.display='flex';
+  document.getElementById('google-geral').style.display='none';
+  document.getElementById('google-clientes').style.display='none';
+  document.getElementById('google-error').style.display='none';
+  try{
+    const res=await fetch(GOOGLE_FN,{method:'POST',headers:FN_HEADERS,body:JSON.stringify({periodo:googlePeriodo})});
+    const json=await res.json();
+    if(json.error)throw new Error(json.error);
+    googleDados=json.contas||[];
+    document.getElementById('google-loading').style.display='none';
+    renderGoogleDados();
+    setGoogleTabVisible();
+  }catch(e){
+    document.getElementById('google-loading').style.display='none';
+    const eb=document.getElementById('google-error');eb.style.display='block';
+    eb.innerHTML=`⚠️ ${e.message}`;
+  }
+}
+
+function renderGoogleDados(){
+  if(!googleDados?.length)return;
+  const total=googleDados.reduce((a,c)=>({investimento:a.investimento+parseFloat(c.investimento||0),impressoes:a.impressoes+parseInt(c.impressoes||0),cliques:a.cliques+parseInt(c.cliques||0),conversoes:a.conversoes+parseInt(c.conversoes||0)}),{investimento:0,impressoes:0,cliques:0,conversoes:0});
+  const ctr=total.impressoes>0?(total.cliques/total.impressoes*100).toFixed(2):0;
+  const cpc=total.cliques>0?(total.investimento/total.cliques).toFixed(2):0;
+  document.getElementById('google-stats').innerHTML=[
+    {l:'Investimento',v:fmt(total.investimento),s:`${googleDados.length} contas`},
+    {l:'Impressões',v:fmtN(total.impressoes),s:'total'},
+    {l:'Cliques',v:fmtN(total.cliques),s:`CTR: ${fmtP(ctr)}`},
+    {l:'CPC médio',v:fmt(cpc),s:'custo por clique'},
+    {l:'Conversões',v:fmtN(total.conversoes),s:'total'},
+  ].map(s=>`<div class="stat-card"><div class="stat-label">${s.l}</div><div class="stat-value">${s.v}</div><div class="stat-sub">${s.s}</div></div>`).join('');
+  const nomes=googleDados.map(c=>c.nome.length>16?c.nome.substring(0,16)+'…':c.nome);
+  renderChart('chart-google-invest','bar',nomes,googleDados.map(c=>parseFloat(c.investimento||0)));
+  renderChart('chart-google-clicks','bar',nomes,googleDados.map(c=>parseInt(c.cliques||0)));
+  renderChart('chart-google-ctr','bar',nomes,googleDados.map(c=>parseFloat(c.ctr||0)));
+  renderChart('chart-google-conv','bar',nomes,googleDados.map(c=>parseInt(c.conversoes||0)));
+  document.getElementById('google-total-contas').textContent=`${googleDados.length} contas`;
+  document.getElementById('google-tabela').innerHTML=googleDados.map(c=>`
+    <tr><td><strong>${c.nome}</strong></td><td>${fmt(c.investimento)}</td><td>${fmtN(c.impressoes)}</td><td>${fmtN(c.cliques)}</td><td>${fmtP(c.ctr)}</td><td>${fmt(c.cpc)}</td><td>${fmt(c.cpm)}</td><td>${fmtN(c.conversoes)}</td><td>${c.cpa?fmt(c.cpa):'—'}</td></tr>
+  `).join('');
+}
+
+function setGooglePeriodo(p,el){googlePeriodo=p;document.querySelectorAll('#page-google .periodo-btns .btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');loadGoogleAds()}
+function setGoogleTabVisible(){document.getElementById('google-geral').style.display=googleDashTab==='geral'?'':'none';document.getElementById('google-clientes').style.display=googleDashTab==='clientes'?'':'none'}
+function exportGoogleCSV(){if(!googleDados?.length){alert('Carregue os dados primeiro!');return}exportData(googleDados,'grapefy-google-ads')}
+
+function setDashTab(plat,tab,el){
+  if(plat==='meta')metaDashTab=tab;else googleDashTab=tab;
+  el.closest('.dash-tabs').querySelectorAll('.dash-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(plat==='meta')setMetaTabVisible();else setGoogleTabVisible();
+}
+
+// ── CHARTS ──
+function renderChart(id,type,labels,data){
+  if(charts[id])charts[id].destroy();
+  const ctx=document.getElementById(id)?.getContext('2d');
+  if(!ctx)return;
+  charts[id]=new Chart(ctx,{type,data:{labels,datasets:[{data,backgroundColor:CORES.map(c=>c+'bb'),borderColor:CORES,borderWidth:1,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b8aaa',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#8b8aaa',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}}});
+}
+
+// ── EXPORT ──
+function exportCSV(){
+  const rows=[['Título','Cliente','Setor','Responsável','Status','Prioridade','Prazo']];
+  TASKS.forEach(t=>rows.push([t.titulo,t.cliente,t.setor,t.responsavel,STATUS_LABELS[t.status],t.prioridade,t.prazo]));
+  downloadCSV(rows,`grapefy-tarefas-${today}`);toast('Exportado!','📄');
+}
+function exportData(data,name){
+  if(!data?.length)return;
+  const keys=Object.keys(data[0]);
+  const rows=[keys,...data.map(r=>keys.map(k=>r[k]))];
+  downloadCSV(rows,`${name}-${today}`);toast('Exportado!','📄');
+}
+function downloadCSV(rows,name){
+  const csv=rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=name+'.csv';a.click();
+}
+
+// ── UTILS ──
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function toast(msg,icon='💬'){
+  const titles={'✅':'Concluído!','🗑':'Excluído','🏢':'Cliente salvo!','📄':'Exportado!'};
+  document.getElementById('toast-icon').textContent=icon;
+  document.getElementById('toast-title').textContent=titles[icon]||'Tarefa criada!';
+  document.getElementById('toast-msg').textContent=msg;
+  const el=document.getElementById('toast-el');el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+sb.channel('tarefas-rt').on('postgres_changes',{event:'*',schema:'public',table:'tarefas'},p=>{
+  if(p.eventType==='INSERT')TASKS.unshift(p.new);
+  else if(p.eventType==='UPDATE'){const i=TASKS.findIndex(t=>t.id==p.new.id);if(i>-1)TASKS[i]=p.new}
+  else if(p.eventType==='DELETE')TASKS=TASKS.filter(t=>t.id!=p.old.id);
+  render();
+}).subscribe();
+
+// Expor funções globalmente
+window.showPage=showPage;window.setView=setView;window.filterArea=filterArea;window.searchTasks=searchTasks;window.openModal=openModal;window.editTask=editTask;window.deleteTask=deleteTask;window.advanceStatus=advanceStatus;window.saveTask=saveTask;window.closeModal=closeModal;window.openClientModal=openClientModal;window.saveClient=saveClient;window.loadMetaAds=loadMetaAds;window.loadGoogleAds=loadGoogleAds;window.setMetaPeriodo=setMetaPeriodo;window.setGooglePeriodo=setGooglePeriodo;window.setDashTab=setDashTab;window.exportCSV=exportCSV;window.exportMetaCSV=exportMetaCSV;window.exportGoogleCSV=exportGoogleCSV;
+(async()=>{await Promise.all([loadTasks(),loadClients()])})();
+</script>
+</body>
+</html>
