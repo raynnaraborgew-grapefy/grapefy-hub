@@ -848,5 +848,13 @@ sb.channel('tarefas-rt').on('postgres_changes',{event:'*',schema:'public',table:
 
 (async()=>{await Promise.all([loadTasks(),loadClients()])})();
 </script>
+  window.showPage=showPage;window.setView=setView;window.filterArea=filterArea;
+window.searchTasks=searchTasks;window.openModal=openModal;window.editTask=editTask;
+window.deleteTask=deleteTask;window.advanceStatus=advanceStatus;window.saveTask=saveTask;
+window.closeModal=closeModal;window.openClientModal=openClientModal;window.saveClient=saveClient;
+window.loadMetaAds=loadMetaAds;window.loadGoogleAds=loadGoogleAds;
+window.setMetaPeriodo=setMetaPeriodo;window.setGooglePeriodo=setGooglePeriodo;
+window.setDashTab=setDashTab;window.exportCSV=exportCSV;
+window.exportMetaCSV=exportMetaCSV;window.exportGoogleCSV=exportGoogleCSV;
 </body>
 </html>
